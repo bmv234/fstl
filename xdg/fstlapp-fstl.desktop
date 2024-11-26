@@ -5,15 +5,15 @@ Name=FSTL
 GenericName=Fast STL Viewer
 Comment=View STL 3D model files
 TryExec=/usr/local/bin/fstl
-Exec=env XDG_DATA_HOME=${HOME}/.local/share XDG_DATA_DIRS=/usr/local/share:/usr/share /usr/local/bin/fstl %F
+Exec=/usr/local/bin/fstl %F
 Terminal=false
 Icon=fstlapp-fstl
 Categories=Graphics;3DGraphics;Viewer;
 MimeType=model/stl;application/sla;application/vnd.ms-3d.stl;
-Keywords=stl;3d;viewer;model;
+Keywords=stl;3d;viewer;
 StartupNotify=true
 NoDisplay=false
-DBusActivatable=true
+Actions=Window;Document;
 
 [Desktop Action Window]
 Name=New Window
