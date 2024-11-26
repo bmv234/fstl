@@ -2,11 +2,19 @@
 #define SHADERLIGHTPREFS_H
 
 #include <QDialog>
+#include <QPushButton>
+#include <QLabel>
+#include <QLineEdit>
+#include <QComboBox>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QGridLayout>
+#include <QSettings>
+#include <QIcon>
+#include <QFrame>
+#include <QColorDialog>
 
 class Canvas;
-class QLabel;
-class QLineEdit;
-class QComboBox;
 
 class ShaderLightPrefs : public QDialog
 {

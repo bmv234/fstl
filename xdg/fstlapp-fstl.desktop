@@ -1,9 +1,24 @@
 [Desktop Entry]
-Name=fstl
+Version=1.0
+Type=Application
+Name=FSTL
 GenericName=Fast STL Viewer
-Exec=fstl %U
+Comment=View STL 3D model files
+TryExec=/usr/local/bin/fstl
+Exec=env XDG_DATA_HOME=${HOME}/.local/share XDG_DATA_DIRS=/usr/local/share:/usr/share /usr/local/bin/fstl %F
 Terminal=false
 Icon=fstlapp-fstl
-Type=Application
-MimeType=model/stl;
-Categories=Utility;
+Categories=Graphics;3DGraphics;Viewer;
+MimeType=model/stl;application/sla;application/vnd.ms-3d.stl;
+Keywords=stl;3d;viewer;model;
+StartupNotify=true
+NoDisplay=false
+DBusActivatable=true
+
+[Desktop Action Window]
+Name=New Window
+Exec=/usr/local/bin/fstl
+
+[Desktop Action Document]
+Name=Open STL File
+Exec=/usr/local/bin/fstl %F

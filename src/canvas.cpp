@@ -1,5 +1,7 @@
 #include <QMouseEvent>
-
+#include <QPainter>
+#include <QSettings>
+#include <QFile>
 #include <cmath>
 
 #include "canvas.h"
@@ -31,7 +33,7 @@ Canvas::Canvas(const QSurfaceFormat& format, QWidget *parent)
 {
     setFormat(format);
     QFile styleFile(":/qt/style.qss");
-    styleFile.open( QFile::ReadOnly );
+    styleFile.open(QFile::ReadOnly);
     setStyleSheet(styleFile.readAll());
     currentTransform = QMatrix4x4();
     resetTransform();
@@ -43,7 +45,6 @@ Canvas::Canvas(const QSurfaceFormat& format, QWidget *parent)
     directiveFactor = settings.value(DIRECTIVE_FACTOR,defaultDirectiveFactor).value<float>();
 
     // Fill direction list
-    // Fill in directions
     nameDir.clear();
     listDir.clear();
     QList<QString> xname, yname, zname;
@@ -145,7 +146,8 @@ void Canvas::common_view_change(enum ViewPoint c)
     update();
 }
 
-void Canvas::view_perspective(float p, bool animate){
+void Canvas::view_perspective(float p, bool animate)
+{
     if(animate)
     {
         view_anim(p);
@@ -168,17 +170,17 @@ void Canvas::invert_zoom(bool d)
     update();
 }
 
-void Canvas::setResetTransformOnLoad(bool d) {
+void Canvas::setResetTransformOnLoad(bool d)
+{
     resetTransformOnLoad = d;
 }
 
-void Canvas::resetTransform() {
+void Canvas::resetTransform()
+{
     currentTransform.setToIdentity();
-    // apply some rotations to define initial orientation
     currentTransform.rotate(-90.0, QVector3D(1, 0, 0));
     currentTransform.rotate(180.0 + 15.0, QVector3D(0, 0, 1));
     currentTransform.rotate(15.0, QVector3D(1, -sin(M_PI/12), 0));
-    
     zoom = 1;
 }
 
@@ -193,8 +195,6 @@ void Canvas::load_mesh(Mesh* m, bool is_reload)
         default_center = center = (lower + upper) / 2;
         default_scale = scale = 2 / (upper - lower).length();
 
-        // Reset other camera parameters
-        zoom = 1;
         if (resetTransformOnLoad) {
             resetTransform();
         }
@@ -254,14 +254,13 @@ void Canvas::initializeGL()
     axis = new Axis();
 }
 
-
 void Canvas::paintGL()
 {
     glClearColor(0.0, 0.0, 0.0, 0.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     backdrop->draw();
-    if (mesh)  draw_mesh();
+    if (mesh) draw_mesh();
     if (drawAxes) axis->draw(transform_matrix(), view_matrix(),
         orient_matrix(), aspect_matrix(), width() / float(height()));
 
@@ -274,7 +273,7 @@ void Canvas::paintGL()
 
 void Canvas::draw_mesh()
 {
-    QOpenGLShaderProgram* selected_mesh_shader = NULL;
+    QOpenGLShaderProgram* selected_mesh_shader = nullptr;
     if(drawMode == wireframe)
     {
         selected_mesh_shader = &mesh_wireframe_shader;
@@ -299,7 +298,6 @@ void Canvas::draw_mesh()
 
     selected_mesh_shader->bind();
 
-    // Load the transform and view matrices into the shader
     glUniformMatrix4fv(
                 selected_mesh_shader->uniformLocation("transform_matrix"),
                 1, GL_FALSE, transform_matrix().data());
@@ -307,50 +305,32 @@ void Canvas::draw_mesh()
                 selected_mesh_shader->uniformLocation("view_matrix"),
                 1, GL_FALSE, view_matrix().data());
 
-    // Compensate for z-flattening when zooming
     glUniform1f(selected_mesh_shader->uniformLocation("zoom"), 1/zoom);
 
-    // specific meshlight arguments
     if (drawMode == meshlight) {
-        // Ambient Light Color, followed by the ambient light coefficient to use
-        //glUniform4f(selected_mesh_shader->uniformLocation("ambient_light_color"),0.22f, 0.8f, 1.0f, 0.67f);
-        glUniform4f(selected_mesh_shader->uniformLocation("ambient_light_color"),ambientColor.redF(), ambientColor.greenF(), ambientColor.blueF(), ambientFactor);
-        // Directive Light Color, followed by the directive light coefficient to use
-        //glUniform4f(selected_mesh_shader->uniformLocation("directive_light_color"),1.0f,1.0f,1.0f,0.5f);
-        glUniform4f(selected_mesh_shader->uniformLocation("directive_light_color"),directiveColor.redF(),directiveColor.greenF(),directiveColor.blueF(),directiveFactor);
-
-        // Directive Light Direction
-        // dir 1,0,0  Light from the left
-        // dir -1,0,0 Light from the right
-        // dir 0,1,0  Light from bottom
-        // dir 0,-1,0 Light from top
-        // dir 0,0,1  Light from viewer (front)
-        // dir 0,0,-1 Light from behind
-        //
-        // -1,-1,0 Light from top right
-        //glUniform3f(selected_mesh_shader->uniformLocation("directive_light_direction"),-1.0f,-1.0f,0.0f);
-        glUniform3f(selected_mesh_shader->uniformLocation("directive_light_direction"),listDir.at(currentLightDirection).x(), listDir.at(currentLightDirection).y(), listDir.at(currentLightDirection).z());
+        glUniform4f(selected_mesh_shader->uniformLocation("ambient_light_color"),
+                   ambientColor.redF(), ambientColor.greenF(), ambientColor.blueF(), ambientFactor);
+        glUniform4f(selected_mesh_shader->uniformLocation("directive_light_color"),
+                   directiveColor.redF(), directiveColor.greenF(), directiveColor.blueF(), directiveFactor);
+        glUniform3f(selected_mesh_shader->uniformLocation("directive_light_direction"),
+                   listDir.at(currentLightDirection).x(),
+                   listDir.at(currentLightDirection).y(),
+                   listDir.at(currentLightDirection).z());
     }
 
-    // Find and enable the attribute location for vertex position
     const GLuint vp = selected_mesh_shader->attributeLocation("vertex_position");
     glEnableVertexAttribArray(vp);
-
-    // Then draw the mesh with that vertex position
     mesh->draw(vp);
-
-    // Reset draw mode for the background and anything else that needs to be drawn
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-    // Clean up state machine
     glDisableVertexAttribArray(vp);
     selected_mesh_shader->release();
 }
+
 QMatrix4x4 Canvas::orient_matrix() const
 {
-    QMatrix4x4 m = currentTransform;
-    return m;
+    return currentTransform;
 }
+
 QMatrix4x4 Canvas::transform_matrix() const
 {
     QMatrix4x4 m = orient_matrix();
@@ -358,6 +338,7 @@ QMatrix4x4 Canvas::transform_matrix() const
     m.translate(-center);
     return m;
 }
+
 QMatrix4x4 Canvas::aspect_matrix() const
 {
     QMatrix4x4 m;
@@ -371,6 +352,7 @@ QMatrix4x4 Canvas::aspect_matrix() const
     }
     return m;
 }
+
 QMatrix4x4 Canvas::view_matrix() const
 {
     QMatrix4x4 m = aspect_matrix();
@@ -398,22 +380,18 @@ void Canvas::mouseReleaseEvent(QMouseEvent* event)
     }
 }
 
-
-// This method change the referential of the mouse point coordinates
-// into a referential x=[-1.0,1.0], y=[-1.0,1.0], with 0,0 being the
-// center of the widget.
-QPointF Canvas::changeMouseCoordinates(QPoint p) {
+QPointF Canvas::changeMouseCoordinates(QPoint p)
+{
     QPointF pr;
-    // Change coordinates
-    double ws2 = this->width() / 2.0;
-    double hs2 = this->height() / 2.0;
+    double ws2 = width() / 2.0;
+    double hs2 = height() / 2.0;
     pr.setX(p.x() / ws2 - 1.0);
     pr.setY(p.y() / hs2 - 1.0);
     return pr;
 }
 
-void Canvas::calcArcballTransform(QPointF p1, QPointF p2) {
-    // Calc z1 & z2
+void Canvas::calcArcballTransform(QPointF p1, QPointF p2)
+{
     double x1 = p1.x();
     double x2 = p2.x();
     double y1 = p1.y();
@@ -437,33 +415,24 @@ void Canvas::calcArcballTransform(QPointF p1, QPointF p2) {
         z2 = 0.0;
     }
 
-    // set v1 and v2
     QVector3D v1(x1, y1, z1);
     QVector3D v2(x2, y2, z2);
-
-    // calc v1 cross v2
     QVector3D v1xv2 = QVector3D::crossProduct(v1, v2);
     QVector3D v1xv2Obj = currentTransform.inverted().mapVector(v1xv2);
-
-    // calc angle
-    double angle = acos(std::min(1.0f,QVector3D::dotProduct(v1, v2))) * 180.0 / M_PI;
-    
-    // apply transform
-    currentTransform.rotate(angle,v1xv2Obj);
+    double angle = acos(std::min(1.0f, QVector3D::dotProduct(v1, v2))) * 180.0 / M_PI;
+    currentTransform.rotate(angle, v1xv2Obj);
 }
 
 void Canvas::mouseMoveEvent(QMouseEvent* event)
 {
     auto p = event->pos();
     auto d = p - mouse_pos;
-    
 
     if (event->buttons() & Qt::LeftButton)
     {
         QPointF p1r = changeMouseCoordinates(mouse_pos);
         QPointF p2r = changeMouseCoordinates(p);
-        calcArcballTransform(p1r,p2r);
-
+        calcArcballTransform(p1r, p2r);
         update();
     }
     else if (event->buttons() & Qt::RightButton)
@@ -471,7 +440,7 @@ void Canvas::mouseMoveEvent(QMouseEvent* event)
         center = transform_matrix().inverted() *
                  view_matrix().inverted() *
                  QVector3D(-d.x() / (0.5*width()),
-                            d.y() / (0.5*height()), 0);
+                          d.y() / (0.5*height()), 0);
         update();
     }
     mouse_pos = p;
@@ -479,8 +448,6 @@ void Canvas::mouseMoveEvent(QMouseEvent* event)
 
 void Canvas::wheelEvent(QWheelEvent *event)
 {
-    // Find GL position before the zoom operation
-    // (to zoom about mouse cursor)
     auto p = event->position();
     QVector3D v(1 - p.x() / (0.5*width()),
                 p.y() / (0.5*height()) - 1, 0);
@@ -504,7 +471,6 @@ void Canvas::wheelEvent(QWheelEvent *event)
                 zoom /= 1.001;
     }
 
-    // Then find the cursor's GL position post-zoom and adjust center.
     QVector3D b = transform_matrix().inverted() *
                   view_matrix().inverted() * v;
     center += b - a;
@@ -516,70 +482,84 @@ void Canvas::resizeGL(int width, int height)
     glViewport(0, 0, width, height);
 }
 
-QColor Canvas::getAmbientColor() {
+QColor Canvas::getAmbientColor()
+{
     return ambientColor;
 }
 
-void Canvas::setAmbientColor(QColor c) {
+void Canvas::setAmbientColor(QColor c)
+{
     ambientColor = c;
     QSettings settings;
-    settings.setValue(AMBIENT_COLOR,c);
+    settings.setValue(AMBIENT_COLOR, c);
 }
 
-double Canvas::getAmbientFactor() {
-    return (float) ambientFactor;
+double Canvas::getAmbientFactor()
+{
+    return ambientFactor;
 }
 
-void Canvas::setAmbientFactor(double f) {
-    ambientFactor = (float) f;
+void Canvas::setAmbientFactor(double f)
+{
+    ambientFactor = f;
     QSettings settings;
-    settings.setValue(AMBIENT_FACTOR,f);
+    settings.setValue(AMBIENT_FACTOR, f);
 }
 
-void Canvas::resetAmbientColor() {
+void Canvas::resetAmbientColor()
+{
     setAmbientColor(defaultAmbientColor);
     setAmbientFactor(defaultAmbientFactor);
 }
 
-QColor Canvas::getDirectiveColor() {
+QColor Canvas::getDirectiveColor()
+{
     return directiveColor;
 }
 
-void Canvas::setDirectiveColor(QColor c) {
+void Canvas::setDirectiveColor(QColor c)
+{
     directiveColor = c;
     QSettings settings;
-    settings.setValue(DIRECTIVE_COLOR,c);
+    settings.setValue(DIRECTIVE_COLOR, c);
 }
 
-double Canvas::getDirectiveFactor() {
-    return (float) directiveFactor;
+double Canvas::getDirectiveFactor()
+{
+    return directiveFactor;
 }
 
-void Canvas::setDirectiveFactor(double f) {
-    directiveFactor = (float) f;
+void Canvas::setDirectiveFactor(double f)
+{
+    directiveFactor = f;
     QSettings settings;
-    settings.setValue(DIRECTIVE_FACTOR,f);
+    settings.setValue(DIRECTIVE_FACTOR, f);
 }
 
-void Canvas::resetDirectiveColor() {
+void Canvas::resetDirectiveColor()
+{
     setDirectiveColor(defaultDirectiveColor);
     setDirectiveFactor(defaultDirectiveFactor);
 }
 
-QList<QString> Canvas::getNameDir() {
+QList<QString> Canvas::getNameDir()
+{
     return nameDir;
 }
 
-int Canvas::getCurrentLightDirection() {
+int Canvas::getCurrentLightDirection()
+{
     return currentLightDirection;
 }
 
-void Canvas::setCurrentLightDirection(int ind) {
+void Canvas::setCurrentLightDirection(int ind)
+{
     currentLightDirection = ind;
     QSettings settings;
-    settings.setValue(CURRENT_LIGHT_DIRECTION,currentLightDirection);
+    settings.setValue(CURRENT_LIGHT_DIRECTION, currentLightDirection);
 }
 
-void Canvas::resetCurrentLightDirection() {
+void Canvas::resetCurrentLightDirection()
+{
     setCurrentLightDirection(defaultCurrentLightDirection);
 }

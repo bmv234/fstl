@@ -1,4 +1,7 @@
 #include <QMenuBar>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QStandardPaths>
 
 #include "window.h"
 #include "canvas.h"
@@ -189,7 +192,7 @@ Window::Window(QWidget *parent) :
             this, &Window::on_resetTransformOnLoad);
 
     view_menu->addAction(hide_menuBar_action);
-    hide_menuBar_action->setShortcut(Qt::CTRL + Qt::SHIFT + Qt::Key_C);
+    hide_menuBar_action->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_C));
     hide_menuBar_action->setCheckable(true);
     QObject::connect(hide_menuBar_action, &QAction::toggled,
             this, &Window::on_hide_menuBar);
@@ -240,7 +243,7 @@ void Window::load_persist_settings(){
     {
         draw_mode = shaded;
     }
-    QAction* (dm_acts[]) = {shaded_action, wireframe_action, surfaceangle_action, meshlight_action};
+    QAction* dm_acts[] = {shaded_action, wireframe_action, surfaceangle_action, meshlight_action};
     dm_acts[draw_mode]->setChecked(true);
     on_drawMode(dm_acts[draw_mode]);
 
@@ -436,8 +439,8 @@ void Window::on_save_screenshot()
     auto file_name = QFileDialog::getSaveFileName(
         this, 
         tr("Save Screenshot Image"),
-        QStandardPaths::standardLocations(QStandardPaths::StandardLocation::PicturesLocation).first(),
-        "Images (*.png *.jpg)");
+        QStandardPaths::standardLocations(QStandardPaths::PicturesLocation).first(),
+        tr("Images (*.png *.jpg)"));
 
     auto get_file_extension = [](const std::string& file_name) -> std::string
     {

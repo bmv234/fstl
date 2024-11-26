@@ -1,5 +1,7 @@
 # fstl
 
+**Note: This project has been updated to use Qt6. The original Qt5 version can be found in earlier releases.**
+
 `fstl` is a very fast [.stl file](http://en.wikipedia.org/wiki/STL_\(file_format\)) viewer.
 
 It was originally written by [Matt Keeter](https://mattkeeter.com),
@@ -60,7 +62,7 @@ This will now become the system default, even when opening files from the file m
 
 ## Building
 
-The only dependency for `fstl` is [Qt 5](https://www.qt.io),
+The only dependency for `fstl` is [Qt 6](https://www.qt.io),
 plus [`cmake`](https://cmake.org/) for building.
 
 ### macOS
@@ -76,7 +78,7 @@ git clone https://github.com/fstl-app/fstl
 cd fstl
 mkdir build
 cd build
-cmake -DCMAKE_PREFIX_PATH=/usr/local/Cellar/qt/5.15.0/ ..
+cmake -DCMAKE_PREFIX_PATH=/path/to/qt6 ..
 make -j8
 ./fstl.app/Contents/MacOS/fstl
 ```
@@ -96,8 +98,8 @@ This should produce two new files in the root directory:
 
 ### Linux
 
-Install Qt with your distro's package manager (required libraries are Core, Gui,
-Widgets and OpenGL, e.g. `qt5-default` and `libqt5opengl5-dev` on Debian).
+Install Qt6 with your distro's package manager (required libraries are Core, Gui,
+Widgets and OpenGLWidgets).
 
 You can build fstl with CMake:
 ```
@@ -109,6 +111,24 @@ cmake ..
 make -j8
 ./fstl
 ```
+
+## Requirements
+
+- CMake 3.16 or higher
+- Qt 6.0 or higher
+- C++17 compliant compiler
+
+## Features
+
+- Fast STL file loading and rendering
+- Support for both ASCII and binary STL files
+- Multiple view modes:
+  * Perspective/Orthographic projection
+  * Shaded, wireframe, and surface angle visualization
+  * Customizable ambient and directive lighting
+- Auto-reload capability
+- Screenshot functionality
+- Cross-platform support (Windows, macOS, Linux)
 
 --------------------------------------------------------------------------------
 

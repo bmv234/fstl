@@ -1,9 +1,17 @@
 #ifndef CANVAS_H
 #define CANVAS_H
 
-#include <QtOpenGL>
-#include <QSurfaceFormat>
+#include <QOpenGLWidget>
+#include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
+#include <QMatrix4x4>
+#include <QVector3D>
+#include <QPropertyAnimation>
+#include <QColor>
+#include <QString>
+#include <QList>
+#include <QPoint>
+#include <QPointF>
 
 class GLMesh;
 class Mesh;
@@ -101,7 +109,6 @@ private:
     const static QString DIRECTIVE_COLOR;
     const static QString DIRECTIVE_FACTOR;
     const static QString CURRENT_LIGHT_DIRECTION;
-
 
     GLMesh* mesh;
     Backdrop* backdrop;

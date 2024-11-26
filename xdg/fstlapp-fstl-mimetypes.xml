@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="model/stl">
+    <sub-class-of type="application/octet-stream"/>
+    <comment>STL 3D model</comment>
+    <comment xml:lang="en">STL 3D model file</comment>
+    <glob pattern="*.stl"/>
+    <glob pattern="*.STL"/>
+    <magic priority="50">
+      <match type="string" offset="0" value="solid"/>
+    </magic>
+    <generic-icon name="fstlapp-fstl"/>
+    <alias type="application/sla"/>
+    <alias type="application/vnd.ms-3d.stl"/>
+    <glob-deleteall/>
+    <glob pattern="*.stl"/>
+    <glob pattern="*.STL"/>
+  </mime-type>
+</mime-info>

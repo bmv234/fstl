@@ -29,35 +29,40 @@ void Loader::run()
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void parallel_sort(Vertex* begin, Vertex* end, int threads)
+void parallel_sort(QList<Vertex>& verts, int threads)
 {
-    if (threads < 2 || end - begin < 2)
+    if (threads < 2 || verts.size() < 2)
     {
-        std::sort(begin, end);
+        std::sort(verts.begin(), verts.end());
     }
     else
     {
-        const auto mid = begin + (end - begin) / 2;
+        auto mid = verts.size() / 2;
+        QList<Vertex> left(verts.begin(), verts.begin() + mid);
+        QList<Vertex> right(verts.begin() + mid, verts.end());
+
         if (threads == 2)
         {
-            auto future = std::async(parallel_sort, begin, mid, threads / 2);
-            std::sort(mid, end);
+            auto future = std::async(parallel_sort, std::ref(left), threads / 2);
+            parallel_sort(right, threads / 2);
             future.wait();
         }
         else
         {
-            auto a = std::async(std::launch::async, parallel_sort, begin, mid, threads / 2);
-            auto b = std::async(std::launch::async, parallel_sort, mid, end, threads / 2);
+            auto a = std::async(std::launch::async, parallel_sort, std::ref(left), threads / 2);
+            auto b = std::async(std::launch::async, parallel_sort, std::ref(right), threads / 2);
             a.wait();
             b.wait();
         }
-        std::inplace_merge(begin, mid, end);
+
+        // Merge the sorted halves back into verts
+        std::merge(left.begin(), left.end(), right.begin(), right.end(), verts.begin());
     }
 }
 
-Mesh* mesh_from_verts(uint32_t tri_count, QVector<Vertex>& verts)
+Mesh* mesh_from_verts(uint32_t tri_count, QList<Vertex>& verts)
 {
-    // Save indicies as the second element in the array
+    // Save indices as the second element in the array
     // (so that we can reconstruct triangle order after sorting)
     for (size_t i=0; i < tri_count*3; ++i)
     {
@@ -65,7 +70,7 @@ Mesh* mesh_from_verts(uint32_t tri_count, QVector<Vertex>& verts)
     }
 
     // Check how many threads the hardware can safely support. This may return
-    // 0 if the property can't be read so we shoud check for that too.
+    // 0 if the property can't be read so we should check for that too.
     auto threads = std::thread::hardware_concurrency();
     if (threads == 0)
     {
@@ -73,7 +78,7 @@ Mesh* mesh_from_verts(uint32_t tri_count, QVector<Vertex>& verts)
     }
 
     // Sort the set of vertices (to deduplicate)
-    parallel_sort(verts.begin(), verts.end(), threads);
+    parallel_sort(verts, threads);
 
     // This vector will store triangles as sets of 3 indices
     std::vector<GLuint> indices(tri_count*3);
@@ -83,7 +88,7 @@ Mesh* mesh_from_verts(uint32_t tri_count, QVector<Vertex>& verts)
     // Unique vertices are moved so that they occupy the first vertex_count
     // positions in the verts array.
     size_t vertex_count = 0;
-    for (auto v : verts)
+    for (const auto& v : verts)
     {
         if (!vertex_count || v != verts[vertex_count-1])
         {
@@ -95,7 +100,7 @@ Mesh* mesh_from_verts(uint32_t tri_count, QVector<Vertex>& verts)
 
     std::vector<GLfloat> flat_verts;
     flat_verts.reserve(vertex_count*3);
-    for (auto v : verts)
+    for (const auto& v : verts)
     {
         flat_verts.push_back(v.x);
         flat_verts.push_back(v.y);
@@ -165,7 +170,8 @@ Mesh* Loader::read_stl_binary(QFile& file)
     }
 
     // Extract vertices into an array of xyz, unsigned pairs
-    QVector<Vertex> verts(tri_count*3);
+    QList<Vertex> verts;
+    verts.reserve(tri_count*3);
 
     // Dummy array, because readRawData is faster than skipRawData
     std::unique_ptr<uint8_t[]> buffer(new uint8_t[tri_count * 50]);
@@ -173,12 +179,14 @@ Mesh* Loader::read_stl_binary(QFile& file)
 
     // Store vertices in the array, processing one triangle at a time.
     auto b = buffer.get() + 3 * sizeof(float);
-    for (auto v=verts.begin(); v != verts.end(); v += 3)
+    for (uint32_t i = 0; i < tri_count * 3; i += 3)
     {
         // Load vertex data from .stl file into vertices
-        for (unsigned i=0; i < 3; ++i)
+        for (unsigned j = 0; j < 3; ++j)
         {
-            qFromLittleEndian<float>(b, 3, &v[i]);
+            float coords[3];
+            qFromLittleEndian<float>(b, 3, coords);
+            verts.append(Vertex(coords[0], coords[1], coords[2]));
             b += 3 * sizeof(float);
         }
 
@@ -193,7 +201,7 @@ Mesh* Loader::read_stl_ascii(QFile& file)
 {
     file.readLine();
     uint32_t tri_count = 0;
-    QVector<Vertex> verts(tri_count*3);
+    QList<Vertex> verts;
 
     bool okay = true;
     while (!file.atEnd() && okay)
@@ -221,7 +229,7 @@ Mesh* Loader::read_stl_ascii(QFile& file)
             const float x = line[1].toFloat(&okay);
             const float y = line[2].toFloat(&okay);
             const float z = line[3].toFloat(&okay);
-            verts.push_back(Vertex(x, y, z));
+            verts.append(Vertex(x, y, z));
         }
         if (!file.readLine().trimmed().startsWith("endloop") ||
             !file.readLine().trimmed().startsWith("endfacet"))
@@ -242,4 +250,3 @@ Mesh* Loader::read_stl_ascii(QFile& file)
         return NULL;
     }
 }
-

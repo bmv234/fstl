@@ -1,14 +1,13 @@
 #### Fast .stl viewer #####
-# Original Project Author: Matt Keeter Copyright 2014-2024
+# Original Project Author: Matt Keeter Copyright 2014-2017
 # Author: Paul Tsouchlos Copyright 2017-2024
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.16)
 
 project(fstl)
 
-# Setting -std=c++11
-set(CMAKE_CXX_STANDARD 11)
-# Setting standard to required, as requisted by DeveloperPaul123 on github
+# Setting C++17 for Qt6 compatibility
+set(CMAKE_CXX_STANDARD 17)
 set(CXX_STANDARD_REQUIRED ON)
 
 # Set the version number
@@ -22,6 +21,11 @@ message(STATUS "Version: ${PROJECT_VERSION}")
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOUIC ON)
+
+# Disable XKB warnings
+if(UNIX AND NOT APPLE)
+    set(QT_XKB OFF CACHE BOOL "Disable XKB requirement")
+endif()
 
 #set project sources
 set(Project_Sources src/app.cpp
@@ -54,18 +58,18 @@ set(Icon_Resource exe/fstl.rc)
 set(OpenGL_GL_PREFERENCE GLVND)
 
 #find required packages. 
-find_package(Qt5 5.14 REQUIRED COMPONENTS Core Gui Widgets OpenGL)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets OpenGLWidgets)
 find_package(OpenGL REQUIRED)
 find_package(Threads REQUIRED)
 
 #add resources to RCC
-qt5_add_resources(Project_Resources_RCC ${Project_Resources})
+qt_add_resources(Project_Resources_RCC ${Project_Resources})
 
 #tell CMake AUTOGEN to skip autogen on the generated qrc files
 set_property(SOURCE ${Project_Resources_RCC} PROPERTY SKIP_AUTOGEN ON)
 
 #include opengl files. 
-include_directories(${QT_QTOPENGL_INCLUDE_DIR} ${OPENGL_INCLUDE_DIR} )
+include_directories(${OPENGL_INCLUDE_DIR})
 
 if(WIN32)
   add_executable(fstl WIN32 ${Project_Sources} ${Project_Headers} ${Project_Resources_RCC} ${Icon_Resource})
@@ -77,7 +81,14 @@ else()
   add_executable(fstl ${Project_Sources} ${Project_Headers} ${Project_Resources_RCC} ${Icon_Resource})
 endif(WIN32)
 
-target_link_libraries(fstl Qt5::Widgets Qt5::Core Qt5::Gui Qt5::OpenGL ${OPENGL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(fstl PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::OpenGLWidgets
+    ${OPENGL_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT}
+)
 
 # Add version definitions to use within the code. 
 target_compile_definitions(fstl PRIVATE -DFSTL_VERSION="${PROJECT_VERSION}")
@@ -89,7 +100,6 @@ set(CPACK_PACKAGE_VERSION_MINOR ${FSTL_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${FSTL_VERSION_PATCH})
 
 if(WIN32)
-
     set(QT_USE_QTMAIN true)
     
     if(MSVC)
@@ -98,27 +108,26 @@ if(WIN32)
 
         install(TARGETS fstl DESTINATION bin COMPONENT all)
         
+        # Install Qt6 runtime libraries
         install(FILES
-            $<TARGET_FILE:Qt5::Gui_EGL>
-            $<TARGET_FILE:Qt5::Gui_GLESv2>
-            $<TARGET_FILE:Qt5::Core>
-            $<TARGET_FILE:Qt5::Gui> 
-            $<TARGET_FILE:Qt5::OpenGL>
-            $<TARGET_FILE:Qt5::Widgets>
+            $<TARGET_FILE:Qt6::Core>
+            $<TARGET_FILE:Qt6::Gui>
+            $<TARGET_FILE:Qt6::OpenGLWidgets>
+            $<TARGET_FILE:Qt6::Widgets>
             DESTINATION bin COMPONENT all)
         
-        #install file in the platforms directory.
-        install (FILES
-            ${Qt5Core_DIR}/../../../plugins/platforms/qwindows.dll
+        # Install Qt6 platform plugins
+        install(FILES
+            ${Qt6Core_DIR}/../../../plugins/platforms/qwindows.dll
             DESTINATION bin/platforms COMPONENT all
         )
 
-        #custom commands based on: https://gist.github.com/Rod-Persky/e6b93e9ee31f9516261b
+        # Copy Qt6 DLLs to build directory
         add_custom_command(TARGET fstl POST_BUILD 
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Core>       $<TARGET_FILE_DIR:${PROJECT_NAME}>
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Gui>        $<TARGET_FILE_DIR:${PROJECT_NAME}>
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Widgets>    $<TARGET_FILE_DIR:${PROJECT_NAME}>
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::OpenGL>     $<TARGET_FILE_DIR:${PROJECT_NAME}>
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt6::Core>           $<TARGET_FILE_DIR:${PROJECT_NAME}>
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt6::Gui>            $<TARGET_FILE_DIR:${PROJECT_NAME}>
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt6::Widgets>        $<TARGET_FILE_DIR:${PROJECT_NAME}>
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt6::OpenGLWidgets>  $<TARGET_FILE_DIR:${PROJECT_NAME}>
         )	
     endif(MSVC)
 
